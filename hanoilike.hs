@@ -7,7 +7,7 @@ start :: All
 start = ((X,X,X,X),(A,B,C,D))
 
 end :: All
-end = ((X,X,X,X),(D,B,A,C))
+end = ((X,X,X,X),(B,D,A,C))
 
 
 shortes :: All -> [All] 
@@ -23,27 +23,31 @@ change :: All -> All -> [All]
 change o p = swap o p
 
 swap :: All -> All -> [All]
-swap a b = roll [] a [("fst","frd"), ("fst","snd") ("snd", "thr"),("thr", "frd")]
+
+delete                  :: Eq a => a -> [a] -> [a]
+delete                  =  deleteBy (==)
+
+deleteBy                :: (a -> a -> Bool) -> a -> [a] -> [a]
+deleteBy eq x []        = []
+deleteBy eq x (y:ys)    = if x `eq` y then ys else y : deleteBy eq x ys
+
+per  [] = [[]]
+per xs =[x:ys | x <- xs, ys <- per (delete x xs)]
+
+perin x = perin' x []
+ where
+  perin' (x:xs) s = perin' xs (s ++ [(x !! 1, x !! 2)])
+  perin' [] s = s
+
+swap a b = rolling a b swap2' (perin (per ["fst", "snd", "thr", "frd"]))
+
+rolling a b f perm = roll [] [a] perm
   where
-    sw1 x = swap3 x b "fst" "frd" "snd"
-    sw2 x = swap3 x b "fst" "snd" "frd"
-    sw3 x = swap3 x b "snd" "thr" "frd"
-    sw4 x = swap3 x b "thr" "frd" "snd"
-
-    r1 = sw1 a
-    r2 = sw2 (last r1)
-    r3 = sw3 (last r2)
-    r4 = sw4 (last r3)
-
-    roll list lastres (x:arguments) = roll (list ++ res) (res) (arguments)
     roll list lastres [] = list
-    	where 
-	  res = swap3 (last lastres) b arguments
+    roll list lastres (x:arg) = roll (list ++ res) (res) (arg)
+        where
+	     res = f (last lastres) b x
 
---  | a == z && d == w = [((X,d,X,X),(a,b,c,X)),((X,d,X,X),(X,b,c,a)),((X,X,X,X),(d,b,c,a))]
-
--- c1 = fst
--- c2 = frd
 cont "fst" _ = "snd"
 cont "fst" "snd" = "thr"
 cont "snd" _ = "fst"
@@ -53,7 +57,7 @@ cont "thr" "fst" = "snd"
 cont "frd" _ = "snd"
 cont "frd" "snd" = "thr"
 
-swap3 x y (a,b) = swap2 x y (sg a) (sg b) (sg c) (ss a) (ss b) (ss c)
+swap2' x y (a,b) = swap2 x y (sg a) (sg b) (sg c) (ss a) (ss b) (ss c)
   where c = cont a b
 
 swap2 :: All -> All -> (Zeile -> Box) -> (Zeile -> Box) -> (Zeile -> Box) -> (Box ->Zeile-> Zeile) -> (Box ->Zeile-> Zeile) -> (Box ->Zeile-> Zeile) -> [All]
