@@ -1,3 +1,5 @@
+import Data.List
+
 data Box = A | B | C | D | X deriving (Show,Eq)
 
 type Zeile = (Box,Box,Box,Box)
@@ -7,8 +9,7 @@ start :: All
 start = ((X,X,X,X),(A,B,C,D))
 
 end :: All
-end = ((X,X,X,X),(B,D,A,C))
-
+end = ((X,X,X,X),(B,A,C,D))
 
 shortes :: All -> [All] 
 shortes x = x : shortes' x []
@@ -22,23 +23,16 @@ shortes x = x : shortes' x []
 change :: All -> All -> [All]
 change o p = swap o p
 
-swap :: All -> All -> [All]
-
-delete                  :: Eq a => a -> [a] -> [a]
-delete                  =  deleteBy (==)
-
-deleteBy                :: (a -> a -> Bool) -> a -> [a] -> [a]
-deleteBy eq x []        = []
-deleteBy eq x (y:ys)    = if x `eq` y then ys else y : deleteBy eq x ys
-
 per  [] = [[]]
 per xs =[x:ys | x <- xs, ys <- per (delete x xs)]
 
+-- list of list to list of tuples
 perin x = perin' x []
  where
   perin' (x:xs) s = perin' xs (s ++ [(x !! 1, x !! 2)])
   perin' [] s = s
 
+swap :: All -> All -> [All]
 swap a b = rolling a b swap2' (perin (per ["fst", "snd", "thr", "frd"]))
 
 rolling a b f perm = roll [] [a] perm
@@ -48,17 +42,13 @@ rolling a b f perm = roll [] [a] perm
         where
 	     res = f (last lastres) b x
 
-cont "fst" _ = "snd"
-cont "fst" "snd" = "thr"
-cont "snd" _ = "fst"
-cont "snd" "fst" = "thr"
-cont "thr" _ = "fst"
-cont "thr" "fst" = "snd"
-cont "frd" _ = "snd"
-cont "frd" "snd" = "thr"
+cont (x:xs) a = delete x a
+cont [] a = a
+
+allPos = ["fst", "snd", "thr", "frd"]
 
 swap2' x y (a,b) = swap2 x y (sg a) (sg b) (sg c) (ss a) (ss b) (ss c)
-  where c = cont a b
+  where c = last (cont [a,b] allPos)
 
 swap2 :: All -> All -> (Zeile -> Box) -> (Zeile -> Box) -> (Zeile -> Box) -> (Box ->Zeile-> Zeile) -> (Box ->Zeile-> Zeile) -> (Box ->Zeile-> Zeile) -> [All]
 
