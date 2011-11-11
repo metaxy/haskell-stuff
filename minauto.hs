@@ -24,7 +24,7 @@ d _ _ = 5
 tab :: Table
 tab = [((i,j),False) | i <- q, j <- (delete i q)]
 
-m =  filter  (\x -> snd x == False) $ doo $ map (mark el) tab
+m = map fst $ nubBy (\x y -> fst (fst x) == snd (fst y) && fst (fst y) == snd (fst x)) $ (filter  (\x -> snd x == False) $ doo $ map (mark el) tab)
 
 el (a,b)
  | a `elem` f && (not $ b `elem` f) || b `elem` f && (not $ a `elem` f) = True
@@ -43,3 +43,21 @@ doo x
 test :: Table -> (State,State) -> Bool
 test x y@(a,b) = foldl (||) False (map(\p -> fromMaybe False (lookup p x)) (map (\o -> ((d (fst (fst o)) (snd o)),(d (snd (fst o)) (snd o)))) (zip [y] sigma)))
 
+test2 = concat $ map (\x -> map (\y -> (x,y, (nD x y))) sigma ) (q \\ (map fst m))
+nD s i 
+ | index == -1 = d s i
+ | otherwise = snd $ m !! index
+ where 
+ index = fromMaybe (-1) (elemIndex (d s i) (map fst m))
+main = do 
+		putStr "Q = "
+		print (q \\ (map fst m))
+		putStr "\nF = "
+		print f
+		putStr "\nSigma = "
+		print sigma
+		putStr "\n";
+		mapM_ putD test2
+
+putD (a,b,c) = do
+		putStrLn $ (show a) ++ " x " ++ (show b) ++  " -> " ++ (show c)
