@@ -1,52 +1,61 @@
+-- Simplify a machine
 import Data.List
 import Data.Maybe
 type Input = Int
 type State = Int
-type Table = [((State,State),Bool)]
-
+type Table = [Cell]
+type Cell = ((State,State),Bool)
+-- Defintion of the machine
 q :: [State]
 q = [0,1,2,3,4]
 sigma =  [0,1]
 f = [4]
-δ :: State -> Input -> State
-δ 0 0 = 1
-δ 0 1 = 2
-δ 1 0 = 4
-δ 1 1 = 2
-δ 2 0 = 3
-δ 2 1 = 2
-δ 3 0 = 4
-δ 3 1 = 0
-δ 4 _ = 4
-δ _ _ = 5
+d :: State -> Input -> State
+d 0 0 = 1
+d 0 1 = 2
+d 1 0 = 4
+d 1 1 = 2
+d 2 0 = 3
+d 2 1 = 2
+d 3 0 = 4
+d 3 1 = 0
+d 4 _ = 4
+d _ _ = 5
 
---usw.
+--The Alogrithm
 tab :: Table
-tab = [((i,j),False) | i <- q, j <- (delete i q)]
+tab = [((i,j),((elem i f) /= (elem j f))) | i <- q, j <- q, i /= j]
 
-m = map (mark el) tab
-
-el (a,b) 
- | a `elem` f && (not $ b `elem` f) = True
- | b `elem` f && (not $ a `elem` f) = True
- | otherwise = False
-
-mark f (a,b) 
+mark f (a,b)
  | f a = (a,True)
- | otherwise = (a,False)
+ | otherwise = (a,b)
 
-doo x 
- | new == x = x
- | otherwise = doo new
- where
-  new = map (mark (test x)) x
-   where
-    g d@((a,b),c)  
-     | c == True = d
-     | test x (a,b) == True = ((a,b),True)
-     | otherwise = d
+test x y = (map fst (filter (\o -> snd o == True) x) `intersect` (scanl dd y sigma)) /= []
+
+dd (x,y) s = (d x s, d y s)
+
+simplify = until (\x -> simplify' x == x) simplify'
+simplify' x = map (mark (test x)) x
+
+-- Output
+m = map fst $ nubBy (\x y -> fst (fst x) == snd (fst y) && fst (fst y) == snd (fst x)) $ filter (\x -> snd x == False) $ simplify tab
 
 
-test :: Table -> (State,State) -> Bool
+test2 = concat $ map (\x -> map (\y -> (x,y, (nD x y))) sigma ) (q \\ (map fst m))
+nD s i 
+  | index == -1 = d s i
+  | otherwise = snd $ m !! index
+   where 
+    index = fromMaybe (-1) (elemIndex (d s i) (map fst m))
 
-test x y@(a,b) =  foldl (||) False (map(\p -> fromMaybe False (lookup p x)) (map (\o -> ((δ (fst (fst o)) (snd o)),(δ (snd (fst o)) (snd o)))) (zip [y] sigma)))
+main = do 
+    	putStr "Q = "
+	print (q \\ (map fst m))
+	putStr "\nF = "
+	print f
+	putStr "\nSigma = "
+	print sigma
+	putStr "\n"
+	mapM_ putD test2
+
+putD (a,b,c) = do putStrLn $ (show a) ++ " x " ++ (show b) ++  " -> " ++ (show c)
