@@ -38,8 +38,9 @@ simplify = until (\x -> simplify' x == x) simplify'
 simplify' x = map (mark (test x)) x
 
 -- Output
-m = map fst $ nubBy (\x y -> fst (fst x) == snd (fst y) && fst (fst y) == snd (fst x)) $ filter (\x -> snd x == False) $ simplify tab
+m = map fst $ nubBy cmp $ filter (\x -> snd x == False) $ simplify tab
 
+cmp (x,_) ((a,b),_) =  x == (b,a) || x == (a,b)
 
 test2 = concat $ map (\x -> map (\y -> (x,y, (nD x y))) sigma ) (q \\ (map fst m))
 nD s i 
