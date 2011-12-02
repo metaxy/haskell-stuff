@@ -8,7 +8,7 @@ type Cell = ((State,State),Bool)
 -- Defintion of the machine
 q :: [State]
 q = [0,1,2,3,4]
-sigma =  [0,1]
+sigma = [0,1]
 f = [4]
 d :: State -> Input -> State
 d 0 0 = 1
@@ -59,3 +59,4 @@ main = do
 	mapM_ putD test2
 
 putD (a,b,c) = do putStrLn $ (show a) ++ " x " ++ (show b) ++  " -> " ++ (show c)
+
