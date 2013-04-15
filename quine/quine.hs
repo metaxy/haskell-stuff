@@ -1,5 +1,5 @@
-import List
-import Maybe
+import Data.List
+import Data.Maybe
 
 type Var = (Int, Bool)
 type Minterm = [Var]
@@ -12,10 +12,11 @@ instance Show a => Show (In a) where
         show F = "F"
         show N = "-"
 
+-- run all on input
 m = col (dominanz $ primtermtable $ primes $ (tabelle input)) 0
 
 input :: [Minterm]
-input = create (		
+{--input = create (		
 		[[F,F,F,F,W],
 		[F,F,F,W,W],
 		[F,F,W,F,W],
@@ -41,13 +42,20 @@ input = create (
 		[W,W,F,W,F],
 		[W,W,W,F,F],
 		[W,W,W,W,F]])
+--}
+input = create( [
+    [F,F,W],
+    [F,W,F],
+    [F,W,W],
+    [W,F,W],
+    [W,W,F]])
 
 -- klasse eines mintermes
 cl :: Minterm -> Int
 cl x = length (filter ((== True).snd) x)
 
 primes :: Tabelle -> Tabelle
-primes = nub. primes' []
+primes = nub . primes' []
 primes' p before
     | next == [([],[])] || next == [] = (p ++ before )
     | otherwise = primes' (p ++ left) next
@@ -98,11 +106,15 @@ rm x y
 primtermtable :: Tabelle -> (Table Zelle Int)
 primtermtable x = [[ (j,i) | i <- [0..((length input)-1)]] | j <- x]
 
+-- can be used on a primtermtable
+-- but it is used in dominanzC
 toDots :: Table Zelle Int -> [[Bool]]
 toDots = map toDots'
 
+-- used by toDots'
 toDots' :: [(Zelle,Int)] -> [Bool]
 toDots' = map (\x -> elem (snd x) (snd (fst x)))
+
 
 dominanz :: Table Zelle Int -> Table Zelle Int
 dominanz x
@@ -153,10 +165,12 @@ domiR' i a = map c con
         c x = (foldl (&&) True (map (\a -> not (fst a == True && snd a == False)) x))
         
 -- stuff
-create' x = zip [0..((length x) -1)] (map toBool x)
 toBool W = True
 toBool F = False
+
 create = map create'
+create' x = zip [0..((length x) -1)] (map toBool x)
+
 toIn True = W
 toIn False = F
 
@@ -202,18 +216,22 @@ xor False a = a
 boolListToInt :: [Bool] -> Int
 boolListToInt x = foldl (+) 0 (map (\a -> (fst a)*(snd a)) (zip (map boolToInt (reverse x)) (iterate (*2) 1)))
 
-minTermToBoolList x = map (\a -> snd a) x
+minTermToBoolList :: Minterm -> [Bool]
+minTermToBoolList = map (\a -> snd a)
 
 boolToInt :: Bool -> Int
 boolToInt True = 1
 boolToInt False = 0
 
-showDots' x = foldl (++) "" (map (\a -> "| " ++ (d a) ++ " ") x)
-showDots'' x = map showDots' x
+showDots' :: [Bool] -> [Char]
+showDots' = foldl (++) "" . (map (\a -> "| " ++ (d a) ++ " "))
 
+showDots'' :: [[Bool]] -> [[Char]]
+showDots'' = map showDots'
+
+-- used by showDots'
 d True = "*"
 d False = " "
-
 
 
 test2 = tabelle input
