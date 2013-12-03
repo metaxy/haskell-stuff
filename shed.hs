@@ -13,8 +13,12 @@ data State = State {
     time :: Int
     ,active :: Process
     ,queue :: [Process]
+    ,queues :: [[Process]]
     ,counter :: Int
 } deriving (Show,Eq)
+
+emptyState :: State
+emptyState = State 0 (timeDown $ head example) [] [[]] 0
 
 example :: [Process]
 example = [
@@ -56,8 +60,32 @@ rr slice s = stateTimeStep $ appendProcess (nextProzess $ time s) $ rr' slice s
 -- sortest job means shortes run time left
 sjn s = stateTimeStep $ sortQueue(comparing run) $ appendProcess (nextProzess $ time s) $ runAsMuchYouWant $ s
 
+mlf s = stateTimeStep $ addToFirstQueue (nextProzess $ time s) $ mlf' 0 s
+
+mlf' level s 
+	| (counter s) == (timeStep level) = nextMlf level s
+	| otherwise = runAsMuchYouWant s
+
+nextMlf level s
+	| null $ queue = --fifo
+ 	| otherwise = --add active to next queue if not empy
+			removeHeadFromQueues level $ s{active = (head queue)} $ 
+		where
+			queue = drop level $ queues s
+
+addToFirstQueue p s = s{queues = (addToFirstQueue' p $ queues s)}
+
+addToFirstQueue' ::  [Process] -> [[Process]] ->  [[Process]]
+addToFirstQueue' p x =  ((head x) ++ p):(tail x)
+
+removeHeadFromQueues level s = s
+
+timeStep i = 2 ** i
+
+
 -- default time counter
-stateTimeStep s@(State t p@(Process p1 p2 r) q a) = s{time = ((time s) + 1), active = timeDown (active s)}
+stateTimeStep s = s{time = ((time s) + 1), 
+		active = timeDown (active s)}
 -- make next process in queue active
 nextProzessInQueue s = s{active= (head q),queue=(tail q)}
     where
@@ -92,7 +120,7 @@ sim2 algo = do
 
 -- run maxTime times
 simulate :: (State -> State) -> [State]
-simulate i = take maxTime $ iterate i (State 0 (timeDown $ head example) [] 0) 
+simulate i = take maxTime $ iterate i emptyState
 
 
 waitTime states = map (\x -> length $ filter (\y -> elem x (queue y)) states) example
@@ -111,14 +139,14 @@ showTable x = do
 
 -- helper to show
 showState :: State -> IO ()
-showState (State time (p@(Process aName aStart aRun)) queue _) = do
+showState s = do
     putStr "-------" 
-    putStr $ show time
+    putStr $ show $ time s
     putStrLn "---------"
     putStr "running: "
-    putStrLn (show p)
+    print $ active s
     putStr "queue:"
-    mapM_ (putStr) (map (show . name) queue)
+    mapM_ putStr (map (show . name) (queue s))
     putStrLn ""
     return ()
 
