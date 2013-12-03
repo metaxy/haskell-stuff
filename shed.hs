@@ -29,20 +29,17 @@ example = [
     ,(Process 'D' 7 13 0)
     ,(Process 'E' 9 2 0)]
 
-maxTime = sum $ (map run example)
+-- used in mlf
+timeStep :: Int -> Int
+timeStep i = 2 ^ i
 
 runAsMuchYouWant s
     | (run $ active s) <= 0 = resetCounter $ nextProzessInQueue s
-    | otherwise = incCounter $ s
-
-act s
-    | (run $ active s) == 0 = []
-    | otherwise = [active s]
-
+    | otherwise = incCounter s
 
 preemp s
     | null n = runAsMuchYouWant s
-    | otherwise = (\x -> x{active = head $ n}) $ appendProcess (act s) s
+    | otherwise = setActive (head n) $ appendProcess (act s) s
     where
         n = nextProzess $ time s
 
@@ -50,8 +47,13 @@ rr' slice s
     | (counter s) == (slice-1) = resetCounter $ nextProzessInQueue $ appendProcess (act s) s
     | otherwise = runAsMuchYouWant s
 
-fcfs s = stateTimeStep $ appendProcess (nextProzess $ time s) $ runAsMuchYouWant s
-lcfs s = stateTimeStep $ prependProcess (nextProzess $ time s)$ runAsMuchYouWant s
+fcfs s = stateTimeStep 
+    $ appendProcess (nextProzess $ time s) 
+    $ runAsMuchYouWant s
+
+lcfs s = stateTimeStep 
+    $ prependProcess (nextProzess $ time s) 
+    $ runAsMuchYouWant s
 
 lcfs_pr s = stateTimeStep $ preemp s
 
@@ -59,26 +61,31 @@ lcfs_pr_sort s = stateTimeStep $ sortQueue(comparing run) $ preemp s
 
 rr slice s = stateTimeStep $ appendProcess (nextProzess $ time s) $ rr' slice s 
 -- sortest job means shortes run time left
-sjn s = stateTimeStep $ sortQueue(comparing run) $ appendProcess (nextProzess $ time s) $ runAsMuchYouWant $ s
+sjn s = stateTimeStep 
+    $ sortQueue(comparing run) 
+    $ appendProcess (nextProzess $ time s) 
+    $ runAsMuchYouWant s
 
 --multilevel feedback
-mlf max s = stateTimeStep $ addToNQueue (nextProzess $ time s) 0 $ mlf' max 0 s
+mlf max s = stateTimeStep 
+    $ addToNQueue (nextProzess $ time s) 0 
+    $ mlf' max 0 s
 
 mlf' max level s 
-	| (counter s) == (timeStep level) = resetCounter $ nextMlf max level s
-	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s
-    | otherwise =  incCounter $ s
+	| (counter s) == (timeStep level) = resetCounter $ nextMlf max level s --time is up
+	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s -- fertig!
+    | otherwise = incCounter s -- derzeitigen einfach laufen lassen
 
 nextMlf max level s
-    | max == level = incCounter $ s
-    | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
-	| null queue = nextMlf max (level + 1) s
+    | max == level = incCounter $ s -- alle queues leer => derzeitigen laufen lassen
+    | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]} 
+	| null queue = nextMlf max (level + 1) s 
  	| otherwise = n $ addToRightQueue (act s) s
 	        where
                 queue = head $ drop level $ queues s
                 n a = removeHeadFromQueues level $ a{active = setLevel level $ (head queue)}  
 
-
+-- add a process to the right queue
 addToRightQueue [] s = s
 addToRightQueue [x] s = addToNQueue [x] ((lev x) + 1) s
 
@@ -92,24 +99,23 @@ removeHeadFromQueues level s = s{queues = modN (drop 1) level $ queues s}
 modN f level q 
     | level == length q = q ++ [f []]
     | level < (length q) = start ++ [middle] ++ end
-    | otherwise = error "to muich"
+    | otherwise = error "to much"
     where
-        start = take (level) q
-        middle' = q !! (level)
+        start = take level q
+        middle' = q !! level
         end = drop (level+1) q
         middle = f middle'
-
-timeStep :: Int -> Int
-timeStep i = 2 ^ i
 
 
 -- default time counter
 stateTimeStep s = s{time = ((time s) + 1), 
-		active = timeDown (active s)}
+		active = timeDown $ active s}
+
+-- === modify state =====
 -- make next process in queue active
-nextProzessInQueue s = s{active= (head q),queue=(tail q)}
-    where
-        q = queue s
+nextProzessInQueue s = s{
+    active = head $ queue s,
+    queue = tail $ queue s}
 
 -- add a process to end of queue
 appendProcess p s = s{queue = (queue s) ++ p}
@@ -121,6 +127,10 @@ incCounter s = s{counter = (counter s) + 1}
 resetCounter s = s{counter = 0 }
 
 sortQueue f s = s{queue = (sortBy f (queue s))}
+
+setActive p s = s{active = p}
+
+-- === modify process ===
 -- time counter for a process
 timeDown :: Process -> Process
 timeDown p = p{run = (run p) - 1}
@@ -139,26 +149,31 @@ sim2 algo = do
     let list = simulate algo
     mapM_ showState list
 
-
 -- run maxTime times
 simulate :: (State -> State) -> [State]
 simulate i = take maxTime $ iterate i emptyState
 
 
+-- statitics
 waitTime states = map (\x -> length $ filter (\y -> (elem x (queue y)) ||  (any (elem x) (queues y))) states) example
 respTime states = map (\(x,y) -> x+y) $ zip (map run example) (waitTime states)
-
-
 mean x = (fromIntegral $ sum x) / (fromIntegral $ length x)
 
---showTable :: [[String]] -> IO ()
+-- helper for simulation
+maxTime = sum $ (map run example)
+
+act s
+    | (run $ active s) == 0 = []
+    | otherwise = [active s]
+
+
+--- output helpers
 showTable x = do
     let heads = map (head) x
     mapM_ (putStr . ((++) "|")) heads
     putStr "\n"
     showTable (map tail x)
     return()
-
 
 -- helper to show
 showState :: State -> IO ()
@@ -191,3 +206,4 @@ show' time
 check a b
     | a == b = "❤❤"
     | otherwise = "  "
+
