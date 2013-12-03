@@ -72,17 +72,18 @@ mlf max s = stateTimeStep
     $ mlf' max 0 s
 
 mlf' max level s 
-	| (counter s) == (timeStep level) = resetCounter $ nextMlf max level s --time is up
-	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s -- fertig!
+	| (counter s) == (timeStep level) = resetCounter $ nextMlf max level s --time is up => nächsten finden
+	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s -- fertig! => nächsten finden
     | otherwise = incCounter s -- derzeitigen einfach laufen lassen
 
 nextMlf max level s
     | max == level = incCounter $ s -- alle queues leer => derzeitigen laufen lassen
-	| null queue = nextMlf max (level + 1) s 
- 	| otherwise = n $ addToRightQueue (act s) s
+	| null queue = nextMlf max (level + 1) s -- diese queue leer => nächste prüfen
+    | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
+ 	| otherwise = n $ addToRightQueue (act s) s -- den ersten aus dieser queue laufen lassen
 	        where
                 queue = head $ drop level $ queues s
-                n a = removeHeadFromQueues level $ a{active = setLevel level $ (head queue)}  
+                n s = removeHeadFromQueues level $ setActive (setLevel level $ (head queue)) s
 
 -- add a process to the right queue
 addToRightQueue [] s = s
