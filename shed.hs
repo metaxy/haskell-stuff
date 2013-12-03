@@ -78,8 +78,8 @@ mlf' max level s
 
 nextMlf max level s
     | max == level = incCounter $ s -- alle queues leer => derzeitigen laufen lassen
-	| null queue = nextMlf max (level + 1) s -- diese queue leer => nächste prüfen
     | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
+	| null queue = nextMlf max (level + 1) s -- diese queue leer => nächste prüfen
  	| otherwise = n $ addToRightQueue (act s) s -- den ersten aus dieser queue laufen lassen
 	        where
                 queue = head $ drop level $ queues s
@@ -91,7 +91,7 @@ addToRightQueue [x] s = addToNQueue [x] ((lev x) + 1) s
 
 -- add a process to the nth queue
 addToNQueue p level s = s{queues = (addToNQueue' p level $ queues s)}
-addToNQueue' p = modN ((++) p)
+addToNQueue' p = modN (\x -> x ++ p)
 
 --remove head process to the nth queue
 removeHeadFromQueues level s = s{queues = modN (drop 1) level $ queues s}
@@ -187,7 +187,7 @@ showState s = do
     mapM_ putStr (map (show . name) (queue s))
     putStrLn ""
     putStr "queues: "
-    mapM_ putStr (map (map (name)) (queues s))
+    print (queues s)
     putStrLn ""
     return ()
 
