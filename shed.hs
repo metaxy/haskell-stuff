@@ -78,7 +78,6 @@ mlf' max level s
 
 nextMlf max level s
     | max == level = incCounter $ s -- alle queues leer => derzeitigen laufen lassen
-    | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]} 
 	| null queue = nextMlf max (level + 1) s 
  	| otherwise = n $ addToRightQueue (act s) s
 	        where
