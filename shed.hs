@@ -4,7 +4,8 @@ data Process = Process {
     name :: Char,
     start :: Int,
     run :: Int,
-    lev :: Int
+    lev :: Int,
+    count :: Int
 } deriving (Show)
 
 instance Eq Process where
@@ -23,11 +24,11 @@ emptyState = State 0 (timeDown $ head example) [] [[]] 0
 
 example :: [Process]
 example = [
-    (Process 'A' 0 8 0) 
-    ,(Process 'B' 1 2 0)
-    ,(Process 'C' 3 7 0)
-    ,(Process 'D' 7 13 0)
-    ,(Process 'E' 9 2 0)]
+    (Process 'A' 0 8 0 0) 
+    ,(Process 'B' 1 2 0 0)
+    ,(Process 'C' 3 7 0 0)
+    ,(Process 'D' 7 13 0 0)
+    ,(Process 'E' 9 2 0 0)]
 
 -- used in mlf
 timeStep :: Int -> Int
@@ -84,18 +85,18 @@ sjn s = stateTimeStep
 -- todo: multiple counters
 mlf max s = stateTimeStep 
  	$ mlf' max 0
-	$ incCounter
+    $ incCounter'
 	$ addToNQueue (nextProzess $ time s) 0 
         $ s
 
 mlf' max level s 
-	| (counter s) >= (timeStep level) = resetCounter $ nextMlf max level s --time is up => nächsten finden
-	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s -- fertig! => nächsten finden
-    	| otherwise = s -- derzeitigen einfach laufen lassen
+	| (count $ active s) >= (timeStep $ lev $ active s) = resetCounter' $ nextMlf max level s --time is up => nächsten finden
+	| (run $ active s) <= 0 = nextMlf max level s -- fertig! => nächsten finden
+    | otherwise = s -- derzeitigen einfach laufen lassen
 
 nextMlf max level s
-    	| max == level =  s -- alle queues leer => derzeitigen laufen lassen
-    	| (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
+    | max == level = s -- alle queues leer => derzeitigen laufen lassen
+    | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
 	| null queue = nextMlf max (level + 1) s -- diese queue leer => nächste prüfen
  	| otherwise = n $ addToRightQueue (act s) s -- den ersten aus dieser queue laufen lassen
 	        where
@@ -107,7 +108,7 @@ addToRightQueue [] s = s
 addToRightQueue [x] s = addToNQueue [x] ((lev x) + 1) s
 
 -- add a process to the nth queue
-addToNQueue p level s = s{queues = (addToNQueue' p level $ queues s)}
+addToNQueue p level s = s{queues = (addToNQueue' (map resetPCounter p) level $ queues s)}
 addToNQueue' p = modN (\x -> x ++ p)
 
 --remove head process to the nth queue
@@ -140,8 +141,10 @@ appendProcess p s = s{queue = (queue s) ++ p}
 prependProcess p s = s{queue = p ++ (queue s)}
 
 incCounter s = s{counter = (counter s) + 1}
+incCounter' s = s{active = (active s){count = (count $ active s) + 1}}
 
 resetCounter s = s{counter = 0 }
+resetCounter' s = s{active = (active s){count = 0}}
 
 sortQueue f s = s{queue = (sortBy f (queue s))}
 
@@ -153,6 +156,8 @@ timeDown :: Process -> Process
 timeDown p = p{run = (run p) - 1}
 
 setLevel level p = p{lev = level}
+
+resetPCounter p = p{count = 0}
 
 -- which process to activate
 nextProzess time = filter (\x -> start x == (time+1)) example
