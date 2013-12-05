@@ -42,6 +42,12 @@ preemp s
     | otherwise = setActive (head n) $ appendProcess (act s) s
     where
         n = nextProzess $ time s
+preemp' s
+    | null n = runAsMuchYouWant s
+    | otherwise = setActive (head n) $ prependProcess (act s) s
+    where
+        n = nextProzess $ time s
+
 
 rr' slice s 
     | (counter s) == (slice-1) = resetCounter $ nextProzessInQueue $ appendProcess (act s) s
@@ -55,26 +61,35 @@ lcfs s = stateTimeStep
     $ prependProcess (nextProzess $ time s) 
     $ runAsMuchYouWant s
 
-lcfs_pr s = stateTimeStep $ preemp s
+lcfs_pr s = stateTimeStep $ preemp' s
 
 lcfs_pr_sort s = stateTimeStep $ sortQueue(comparing run) $ preemp s
 
-rr slice s = stateTimeStep $ appendProcess (nextProzess $ time s) $ rr' slice s 
+rr slice s = stateTimeStep $ rr' slice $ appendProcess (nextProzess $ time s) s
+
+
 -- sortest job means shortes run time left
-sjn s = stateTimeStep 
+srtn s = stateTimeStep 
     $ sortQueue(comparing run) 
     $ appendProcess (nextProzess $ time s) 
     $ runAsMuchYouWant s
 
+sjn s = stateTimeStep 
+    $ sortQueue(comparing (run))
+    $ appendProcess (nextProzess $ time s) 
+    $ runAsMuchYouWant s
+
+
 --multilevel feedback
 mlf max s = stateTimeStep 
-    $ addToNQueue (nextProzess $ time s) 0 
-    $ mlf' max 0 s
+ 	$ mlf' max 0    
+	$ addToNQueue (nextProzess $ time s) 0 
+        $ s
 
 mlf' max level s 
 	| (counter s) == (timeStep level) = resetCounter $ nextMlf max level s --time is up => nächsten finden
 	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s -- fertig! => nächsten finden
-    | otherwise = incCounter s -- derzeitigen einfach laufen lassen
+    	| otherwise = incCounter s -- derzeitigen einfach laufen lassen
 
 nextMlf max level s
     | max == level = incCounter $ s -- alle queues leer => derzeitigen laufen lassen
@@ -183,6 +198,8 @@ showState s = do
     putStrLn "---------"
     putStr "running: "
     print $ active s
+    putStr "counter: "
+    print $ counter s
     putStr "queue: "
     mapM_ putStr (map (show . name) (queue s))
     putStrLn ""
