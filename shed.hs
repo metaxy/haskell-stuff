@@ -81,19 +81,21 @@ sjn s = stateTimeStep
 
 
 --multilevel feedback
+-- todo: multiple counters
 mlf max s = stateTimeStep 
- 	$ mlf' max 0    
+ 	$ mlf' max 0
+	$ incCounter
 	$ addToNQueue (nextProzess $ time s) 0 
         $ s
 
 mlf' max level s 
-	| (counter s) == (timeStep level) = resetCounter $ nextMlf max level s --time is up => nächsten finden
+	| (counter s) >= (timeStep level) = resetCounter $ nextMlf max level s --time is up => nächsten finden
 	| (run $ active s) <= 0 = resetCounter $ nextMlf max level s -- fertig! => nächsten finden
-    	| otherwise = incCounter s -- derzeitigen einfach laufen lassen
+    	| otherwise = s -- derzeitigen einfach laufen lassen
 
 nextMlf max level s
-    | max == level = incCounter $ s -- alle queues leer => derzeitigen laufen lassen
-    | (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
+    	| max == level =  s -- alle queues leer => derzeitigen laufen lassen
+    	| (length $ queues s) <= level = nextMlf max level $ s{queues = (queues s) ++ [[]]}
 	| null queue = nextMlf max (level + 1) s -- diese queue leer => nächste prüfen
  	| otherwise = n $ addToRightQueue (act s) s -- den ersten aus dieser queue laufen lassen
 	        where
